@@ -10,6 +10,7 @@
 
   --red: #f25b47;
   --blue: #387af0;
+  --base: #f8f8f8;
   --gray: #d0d0d0;
   --black: #535353;
 
@@ -33,6 +34,29 @@ main {
   gap: 1em;
   max-width: 800px;
   margin: 0 auto;
+}
+
+label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+#interactive {
+  position: relative;
+}
+
+#prompt {
+  padding: 1em;
+  background: var(--base);
+}
+
+#opts {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  top: 10px;
+  left: 10px;
 }
 
 .callout {

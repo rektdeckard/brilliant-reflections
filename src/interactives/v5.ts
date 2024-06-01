@@ -3,7 +3,6 @@ import {
   Color,
   C,
   CANVAS_WIDTH,
-  CANVAS_HEIGHT,
   DETECTOR_RADIUS,
   PHOTON_RADIUS,
   WALL_THICKNESS,
@@ -98,7 +97,6 @@ class Room {
 }
 
 export default function(p: p5) {
-  let canv: p5.Renderer;
   let simulating: boolean = true;
 
   let room: Room;
@@ -111,7 +109,6 @@ export default function(p: p5) {
   let raySegments: Array<p5.Vector> = [];
 
   p.setup = () => {
-    canv = p.createCanvas(CANVAS_WIDTH * 3, CANVAS_HEIGHT);
     room = new Room(p);
     detector = p.createVector(p.width / 2, p.height - WALL_THICKNESS / 2);
 
