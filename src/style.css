@@ -7,15 +7,54 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --red: #f25b47;
+  --blue: #387af0;
+  --gray: #d0d0d0;
+  --black: #535353;
+
+  /* background: #282828; */
+  /* color: var(--gray); */
 }
 
-body {}
+* {
+  margin: 0;
+}
+
+body {
+  margin: 1em;
+}
 
 main {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: space-around;
-  flex-wrap: wrap;
   gap: 1em;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
+.callout {
+  display: inline-block;
+  padding: 0 0.2em;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+}
+
+.line-solid {
+  display: inline-block;
+  vertical-align: middle;
+  background: var(--red);
+  width: 32px;
+  height: 2px;
+}
+
+.line-dashed {
+  display: inline-block;
+  vertical-align: middle;
+  background: linear-gradient(to right,var(--red) 50%, transparent 50%);
+  background-size: 8px;
+  width: 32px;
+  height: 2px;
+}

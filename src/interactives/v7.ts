@@ -5,6 +5,7 @@ import {
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
   DETECTOR_RADIUS,
+  OBJECT_RADIUS,
   PHOTON_RADIUS,
   WALL_THICKNESS,
 } from "../constants";
@@ -16,10 +17,15 @@ class Room {
   wallBottom: [p5.Vector, p5.Vector];
 
   constructor(p: p5) {
-    this.mirrorLeft = [p.createVector(CANVAS_WIDTH, 0), p.createVector(CANVAS_WIDTH, p.height)];
-    this.mirrorRight = [p.createVector(CANVAS_WIDTH * 2, 0), p.createVector(CANVAS_WIDTH * 2, p.height)];
-    this.wallTop = [p.createVector(CANVAS_WIDTH, 0), p.createVector(CANVAS_WIDTH * 2, 0)];
-    this.wallBottom = [p.createVector(CANVAS_WIDTH, p.height), p.createVector(CANVAS_WIDTH * 2, p.height)]
+    const topl = [p.width / 3, p.height / 4];
+    const topr = [p.width * (2 / 3), p.height / 4];
+    const botl = [p.width / 3, p.height * (3 / 4)];
+    const botr = [p.width * (2 / 3), p.height * (3 / 4)];
+
+    this.mirrorLeft = [p.createVector(...topl), p.createVector(...botl)];
+    this.mirrorRight = [p.createVector(...topr), p.createVector(...botr)];
+    this.wallTop = [p.createVector(...topl), p.createVector(...topr)];
+    this.wallBottom = [p.createVector(...botl), p.createVector(...botr)]
   }
 
   left() {
@@ -94,6 +100,82 @@ class Room {
       this.right(), this.bottom(),
       this.left(), this.bottom(),
     );
+
+    p.fill(...Color.WALL, 128);
+    p.quad(
+      0, this.top(),
+      this.left(), this.top(),
+      this.left(), this.top() + WALL_THICKNESS,
+      0, this.top() + WALL_THICKNESS,
+    );
+    p.quad(
+      0, this.bottom(),
+      0, this.bottom() - WALL_THICKNESS,
+      this.left(), this.bottom() - WALL_THICKNESS,
+      this.left(), this.bottom(),
+    );
+    p.quad(
+      this.right(), this.top(),
+      p.width, this.top(),
+      p.width, this.top() + WALL_THICKNESS,
+      this.right(), this.top() + WALL_THICKNESS,
+    );
+    p.quad(
+      this.right(), this.bottom(),
+      this.right(), this.bottom() - WALL_THICKNESS,
+      p.width, this.bottom() - WALL_THICKNESS,
+      p.width, this.bottom(),
+    );
+  }
+}
+
+class Emitter {
+  position: p5.Vector;
+
+  constructor(position: p5.Vector) {
+    this.position = position;
+  }
+
+  render(p: p5) {
+    p.noStroke();
+    p.fill(...Color.OBJECT);
+    p.circle(this.position.x, this.position.y, OBJECT_RADIUS * 2);
+  }
+}
+
+class VirtualImage {
+  position: p5.Vector;
+
+  constructor(position: p5.Vector) {
+    this.position = position;
+  }
+
+  render(p: p5, d: Detector) {
+    p.stroke(...Color.RAY);
+    p.line(this.position.x, this.position.y, d.position.x, d.position.y);
+
+    p.noStroke();
+    p.fill(...Color.OBJECT, 64);
+    p.circle(this.position.x, this.position.y, OBJECT_RADIUS * 2);
+  }
+}
+
+class Detector {
+  position: p5.Vector;
+
+  constructor(position: p5.Vector) {
+    this.position = position;
+  }
+
+  isDetecting(p: p5, point: p5.Vector) {
+    const d = p.dist(point.x, point.y, this.position.x, this.position.y);
+    return d <= DETECTOR_RADIUS;
+  }
+
+  render(p: p5) {
+    p.noStroke();
+    p.fill(...Color.DEBUG);
+    p.ellipse(this.position.x, this.position.y, DETECTOR_RADIUS * 2, DETECTOR_RADIUS * 2);
   }
 }
 
@@ -102,7 +184,9 @@ export default function(p: p5) {
   let simulating: boolean = true;
 
   let room: Room;
-  let detector: p5.Vector;
+  let object: Emitter;
+  let image: VirtualImage;
+  let detector: Detector;
 
   let position: p5.Vector;
   let velocity: p5.Vector;
@@ -111,27 +195,44 @@ export default function(p: p5) {
   let raySegments: Array<p5.Vector> = [];
 
   p.setup = () => {
-    canv = p.createCanvas(CANVAS_WIDTH * 3, CANVAS_HEIGHT);
+    canv = p.createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
     room = new Room(p);
-    detector = p.createVector(p.width / 2, p.height - WALL_THICKNESS / 2);
+    object = new Emitter(p.createVector(p.random(room.left(), room.right()), p.random(room.top(), room.bottom())));
+    image = new VirtualImage(object.position.copy());
+    detector = new Detector(p.createVector((p.width / 2) - (WALL_THICKNESS / 2), room.bottom() - (WALL_THICKNESS / 2)));
 
-    position = p.createVector(p.width / 2, 0);
+    position = object.position.copy();
     pushPosition();
 
     velocity = p5.Vector.random2D();
     velocity.mult(C);
+
+    canv.mouseMoved((e: MouseEvent) => {
+      const pos = p.createVector(e.offsetX, e.offsetY);
+      if (!room.contains(pos)) {
+        image.position = pos;
+      }
+    });
   }
 
   p.draw = () => {
-    if (!simulating) return;
+    if (!simulating) {
+      p.noLoop();
+      return;
+    };
 
     room.render(p);
+    object.render(p);
     position.add(velocity);
 
     incidence = p5.Vector.mult(velocity, -1) as unknown as p5.Vector;
     incidence.normalize();
 
-    if (isDetected()) {
+    if (!room.contains(image.position)) {
+      image.render(p, detector);
+    }
+
+    if (detector.isDetecting(p, position)) {
       p.stroke(...Color.DEBUG);
       simulating = false;
     }
@@ -158,19 +259,27 @@ export default function(p: p5) {
       simulating = false;
     }
 
-    renderDetector();
+    detector.render(p);
     renderSegments();
     renderPhoton();
+
+    {
+      const rl = object.position.copy();
+      const rr = object.position.copy();
+
+      rl.x = (room.left() * 2) - rl.x;
+      rr.x = rr.x + room.left();
+      p.fill(...Color.OBJECT, 128);
+      p.noStroke();
+      p.circle(rl.x, rl.y, 20);
+      p.circle(rr.x, rr.y, 20);
+    }
   }
 
   function pushPosition() {
     raySegments.push(position.copy());
   }
 
-  function isDetected() {
-    const d = Math.sqrt((position.x - detector.x) ** 2 + (position.y - detector.y) ** 2);
-    return d <= DETECTOR_RADIUS;
-  }
 
   function renderPhoton() {
     p.noStroke();
@@ -178,11 +287,6 @@ export default function(p: p5) {
     p.ellipse(position.x, position.y, PHOTON_RADIUS * 2, PHOTON_RADIUS * 2);
   }
 
-  function renderDetector() {
-    p.noStroke();
-    p.fill(...Color.DEBUG);
-    p.ellipse(detector.x, detector.y, DETECTOR_RADIUS * 2, DETECTOR_RADIUS * 2);
-  }
 
   function renderSegments() {
     p.stroke(...Color.RAY);
