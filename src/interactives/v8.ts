@@ -24,11 +24,20 @@ export default function(p: p5) {
   let target: Thing;
   let detector: Detector;
 
-  let position: p5.Vector;
-
   let draggingObject = false;
   let draggingDetector = false;
-  let raySegments: Array<p5.Vector> = [];
+
+  function reset() {
+    object = new Thing(p.createVector(
+      p.random(room.left() + OBJECT_RADIUS, room.right() - OBJECT_RADIUS),
+      p.random(room.top() + OBJECT_RADIUS, room.bottom() - OBJECT_RADIUS),
+    ));
+    target = new Thing(p.createVector(
+      p.random(room.left() + OBJECT_RADIUS, room.right() - OBJECT_RADIUS),
+      p.random(room.top() + OBJECT_RADIUS, room.bottom() - OBJECT_RADIUS),
+    ));
+    detector = new Detector(p.createVector((p.width / 2) - (WALL_THICKNESS / 2), room.bottom() - (WALL_THICKNESS / 2)));
+  }
 
   p.preload = () => {
     detectorImage = p.loadImage("eye.png");
@@ -40,18 +49,7 @@ export default function(p: p5) {
   p.setup = () => {
     canv = p.createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
     room = new Room(p);
-    object = new Thing(p.createVector(
-      p.random(room.left() + OBJECT_RADIUS, room.right() - OBJECT_RADIUS),
-      p.random(room.top() + OBJECT_RADIUS, room.bottom() - OBJECT_RADIUS),
-    ));
-    detector = new Detector(p.createVector((p.width / 2) - (WALL_THICKNESS / 2), room.bottom() - (WALL_THICKNESS / 2)));
-    target = new Thing(p.createVector(
-      p.random(room.left() + OBJECT_RADIUS, room.right() - OBJECT_RADIUS),
-      p.random(room.top() + OBJECT_RADIUS, room.bottom() - OBJECT_RADIUS),
-    ));
-
-    position = object.position.copy();
-    pushPosition();
+    reset();
 
     targetImage.filter(p.GRAY);
     p.strokeWeight(2);
@@ -102,7 +100,12 @@ export default function(p: p5) {
 
     const dbg = document.querySelector<HTMLInputElement>("#debug > input")!;
     dbg.checked = debug;
-    dbg.addEventListener("change", () => debug = !debug);
+    dbg.addEventListener("change", () => {
+      debug = !debug;
+    });
+
+    const rst = document.getElementById("reset")!;
+    rst.addEventListener("click", reset);
   }
 
   p.draw = () => {
@@ -112,56 +115,126 @@ export default function(p: p5) {
     };
 
     room.render(p);
-    object.render(p, objectImage);
 
     {
-      p.noStroke();
-      p.fill(...Color.MIRROR, 128);
-      p.quad(
-        room.left() / 2 + WALL_THICKNESS * 2, room.top(),
-        room.left() / 2 + WALL_THICKNESS * 3, room.top(),
-        room.left() / 2 + WALL_THICKNESS * 3, room.bottom(),
-        room.left() / 2 + WALL_THICKNESS * 2, room.bottom(),
-      );
-      p.quad(
-        room.left() * 2 - WALL_THICKNESS * 2, room.top(),
-        room.left() * 2 - WALL_THICKNESS * 3, room.top(),
-        room.left() * 2 - WALL_THICKNESS * 3, room.bottom(),
-        room.left() * 2 - WALL_THICKNESS * 2, room.bottom(),
-      );
+      {
+        // Render walls of virtual rooms
+        p.noStroke();
+        p.fill(...Color.MIRROR, 128);
+        p.quad(
+          room.left() / 2 + WALL_THICKNESS * 2, room.top(),
+          room.left() / 2 + WALL_THICKNESS * 3, room.top(),
+          room.left() / 2 + WALL_THICKNESS * 3, room.bottom(),
+          room.left() / 2 + WALL_THICKNESS * 2, room.bottom(),
+        );
+        p.quad(
+          room.left() * 2 - WALL_THICKNESS * 2, room.top(),
+          room.left() * 2 - WALL_THICKNESS * 3, room.top(),
+          room.left() * 2 - WALL_THICKNESS * 3, room.bottom(),
+          room.left() * 2 - WALL_THICKNESS * 2, room.bottom(),
+        );
+        p.quad(
+          WALL_THICKNESS * 4, room.top(),
+          WALL_THICKNESS * 5, room.top(),
+          WALL_THICKNESS * 5, room.bottom(),
+          WALL_THICKNESS * 4, room.bottom(),
+        );
+        p.quad(
+          p.width - WALL_THICKNESS * 4, room.top(),
+          p.width - WALL_THICKNESS * 5, room.top(),
+          p.width - WALL_THICKNESS * 5, room.bottom(),
+          p.width - WALL_THICKNESS * 4, room.bottom(),
+        );
+      }
 
-      const rl = object.position.copy();
-      const rll = object.position.copy();
-      const rr = object.position.copy();
-      const rrr = object.position.copy();
-      const trl = target.position.copy();
-      const trll = target.position.copy();
-      const trr = target.position.copy();
-      const trrr = target.position.copy();
+      // Render virtual targets
+      {
+        const trl = target.position.copy();
+        trl.x = (room.left() * 2) - trl.x + WALL_THICKNESS * 2;
+        p.image(targetImage, trl.x - OBJECT_RADIUS, trl.y - OBJECT_RADIUS, OBJECT_RADIUS * 2, OBJECT_RADIUS * 2);
 
-      rl.x = (room.left() * 2) - rl.x + WALL_THICKNESS * 2;
-      rll.x = (room.left() * 3) - rl.x - WALL_THICKNESS * 2;
-      rr.x = (room.left() * 2) - rr.x + (room.right() * (3 / 5)) + WALL_THICKNESS * 6;
-      rrr.x = (room.left() * 2) - rr.x + WALL_THICKNESS * 2;
+        const trll = target.position.copy();
+        trll.x = (room.left() * 3) - trl.x - WALL_THICKNESS * 2;
+        p.image(targetImage, trll.x - OBJECT_RADIUS, trll.y - OBJECT_RADIUS, OBJECT_RADIUS * 2, OBJECT_RADIUS * 2);
 
-      trl.x = (room.left() * 2) - trl.x + WALL_THICKNESS * 2;
-      trll.x = (room.left() * 3) - trl.x - WALL_THICKNESS * 2;
-      trr.x = (room.left() * 2) - trr.x + (room.right() * (3 / 5)) + WALL_THICKNESS * 6;
-      trrr.x = (room.left() * 2) - trr.x + WALL_THICKNESS * 2;
+        const trr = target.position.copy();
+        trr.x = (room.left() * 2) - trr.x + (room.right() * (3 / 5)) + WALL_THICKNESS * 6;
+        p.image(targetImage, trr.x - OBJECT_RADIUS, trr.y - OBJECT_RADIUS, OBJECT_RADIUS * 2, OBJECT_RADIUS * 2);
 
-      p.image(targetImage, trl.x - OBJECT_RADIUS, trl.y - OBJECT_RADIUS, OBJECT_RADIUS * 2, OBJECT_RADIUS * 2);
-      p.image(targetImage, trr.x - OBJECT_RADIUS, trr.y - OBJECT_RADIUS, OBJECT_RADIUS * 2, OBJECT_RADIUS * 2);
-      p.image(targetImage, trll.x - OBJECT_RADIUS, trll.y - OBJECT_RADIUS, OBJECT_RADIUS * 2, OBJECT_RADIUS * 2);
-      p.image(targetImage, trrr.x - OBJECT_RADIUS, trrr.y - OBJECT_RADIUS, OBJECT_RADIUS * 2, OBJECT_RADIUS * 2);
+        const trrr = target.position.copy();
+        trrr.x = (room.left() * 2) - trr.x + WALL_THICKNESS * 2;
+        p.image(targetImage, trrr.x - OBJECT_RADIUS, trrr.y - OBJECT_RADIUS, OBJECT_RADIUS * 2, OBJECT_RADIUS * 2);
+      }
 
       const success = target.contains(p, object.position);
       if (success || debug) {
-        const color = (success ? Color.SUCCESS : Color.RAY) as [number, number, number];
-        p.stroke(...color);
-        p.line(detector.position.x, detector.position.y, rl.x, rl.y);
-        p.line(detector.position.x, detector.position.y, rll.x, rll.y);
-        p.line(detector.position.x, detector.position.y, rr.x, rr.y);
-        p.line(detector.position.x, detector.position.y, rrr.x, rrr.y);
+        // Render virtual image r
+        const rr = object.position.copy();
+        rr.x = (room.left() * 2) - rr.x + (room.right() * (3 / 5)) + WALL_THICKNESS * 6;
+        {
+          const color = (success ? Color.SUCCESS : Color.WARNING) as [number, number, number];
+          p.stroke(...color);
+          const h = ((room.right() - detector.position.x) * (rr.y - detector.position.y)) / (rr.x - detector.position.x);
+          const ri = p.createVector(room.right(), detector.position.y + h);
+          p.line(detector.position.x, detector.position.y, ri.x, ri.y);
+          p.line(ri.x, ri.y, object.position.x, object.position.y);
+          p.stroke(...color, 64);
+          p.line(ri.x, ri.y, rr.x, rr.y);
+        }
+
+        // Render virtual image l
+        const rl = object.position.copy();
+        rl.x = (room.left() * 2) - rl.x + WALL_THICKNESS * 2;
+        {
+          const color = (success ? Color.SUCCESS : Color.DEBUG) as [number, number, number];
+          p.stroke(...color);
+          const h = ((detector.position.x - room.left()) * (detector.position.y - rl.y)) / (detector.position.x - rl.x);
+          const li = p.createVector(room.left(), detector.position.y - h);
+          p.line(detector.position.x, detector.position.y, li.x, li.y);
+          p.line(li.x, li.y, object.position.x, object.position.y);
+          p.stroke(...color, 64);
+          p.line(li.x, li.y, rl.x, rl.y);
+        }
+
+        // Render virtual image r'
+        const rrr = object.position.copy();
+        rrr.x = (room.left() * 3) - rl.x - WALL_THICKNESS * 2;
+        {
+          const color = (success ? Color.SUCCESS : Color.INFO) as [number, number, number];
+          p.stroke(...color);
+          const w = room.right() - room.left();
+          const rw = (room.left() * 2 - WALL_THICKNESS * 3);
+          const rat = (rrr.x - detector.position.x) / (rrr.y - detector.position.y);
+          const h1 = (room.right() - detector.position.x) / rat;
+          const h2 = ((room.left() * 2 + WALL_THICKNESS * 2) - detector.position.x) / rat;
+          const rri = p.createVector(room.right(), detector.position.y + h1);
+          const rrii = p.createVector(rw - w * 2 + WALL_THICKNESS * 3, detector.position.y + h2);
+          p.line(detector.position.x, detector.position.y, rri.x, rri.y);
+          p.line(rri.x, rri.y, rrii.x, rrii.y);
+          p.line(rrii.x, rrii.y, object.position.x, object.position.y);
+          p.stroke(...color, 64);
+          p.line(detector.position.x, detector.position.y, rrr.x, rrr.y);
+        }
+
+        // Render virtual image l'
+        const rll = object.position.copy();
+        rll.x = (room.left() * 2) - rr.x + WALL_THICKNESS * 2;
+        {
+          const color = (success ? Color.SUCCESS : Color.ERROR) as [number, number, number];
+          p.stroke(...color);
+          const w = room.right() - room.left();
+          const rw = (room.left() * 2 - WALL_THICKNESS * 3);
+          const rat = (detector.position.x - rll.x) / (rll.y - detector.position.y);
+          const h1 = (detector.position.x - room.left()) / rat;
+          const h2 = (detector.position.x - room.left() / 2 + WALL_THICKNESS * 2) / rat;
+          const rri = p.createVector(room.left(), detector.position.y + h1);
+          const rrii = p.createVector(rw - w * 2 + WALL_THICKNESS * 3 + w, detector.position.y + h2);
+          p.line(detector.position.x, detector.position.y, rri.x, rri.y);
+          p.line(rri.x, rri.y, rrii.x, rrii.y);
+          p.line(rrii.x, rrii.y, object.position.x, object.position.y);
+          p.stroke(...color, 64);
+          p.line(detector.position.x, detector.position.y, rll.x, rll.y);
+        }
 
         p.fill(...Color.OBJECT, 128);
         p.noStroke();
@@ -169,18 +242,15 @@ export default function(p: p5) {
           p.tint(255, 128);
         }
         p.image(reflectionImage, rl.x - OBJECT_RADIUS, rl.y - OBJECT_RADIUS, OBJECT_RADIUS * 2, OBJECT_RADIUS * 2);
-        p.image(reflectionImage, rll.x - OBJECT_RADIUS, rll.y - OBJECT_RADIUS, OBJECT_RADIUS * 2, OBJECT_RADIUS * 2);
-        p.image(reflectionImage, rr.x - OBJECT_RADIUS, rr.y - OBJECT_RADIUS, OBJECT_RADIUS * 2, OBJECT_RADIUS * 2);
         p.image(reflectionImage, rrr.x - OBJECT_RADIUS, rrr.y - OBJECT_RADIUS, OBJECT_RADIUS * 2, OBJECT_RADIUS * 2);
+        p.image(reflectionImage, rr.x - OBJECT_RADIUS, rr.y - OBJECT_RADIUS, OBJECT_RADIUS * 2, OBJECT_RADIUS * 2);
+        p.image(reflectionImage, rll.x - OBJECT_RADIUS, rll.y - OBJECT_RADIUS, OBJECT_RADIUS * 2, OBJECT_RADIUS * 2);
         p.tint(255, 255);
       }
     }
 
+    object.render(p, objectImage);
     detector.render(p, detectorImage);
-  }
-
-  function pushPosition() {
-    raySegments.push(position.copy());
   }
 }
 

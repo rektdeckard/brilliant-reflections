@@ -9,7 +9,11 @@
   -moz-osx-font-smoothing: grayscale;
 
   --red: #f25b47;
+  --orange: #ff9b3e;
+  --yellow: #f7c325;
+  --green: #29cc57;
   --blue: #387af0;
+  --purple: #a975ff;
   --base: #f8f8f8;
   --gray: #d0d0d0;
   --black: #535353;
@@ -59,6 +63,14 @@ label {
   left: 10px;
 }
 
+#ctrl {
+  position: absolute;
+    display: flex;
+    flex-direction: column;
+    bottom: 10px;
+    right: 10px;
+}
+
 .callout {
   display: inline-block;
   padding: 0 0.2em;
@@ -74,11 +86,15 @@ label {
   height: 2px;
 }
 
-.line-dashed {
+.line-solid.green {
+  background-color: var(--green);
+}
+
+.line-dimmed {
   display: inline-block;
   vertical-align: middle;
-  background: linear-gradient(to right,var(--red) 50%, transparent 50%);
-  background-size: 8px;
+  background: var(--red);
+  opacity: 0.5;
   width: 32px;
   height: 2px;
 }
